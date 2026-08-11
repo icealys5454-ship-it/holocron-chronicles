@@ -68,6 +68,33 @@ export class HolocronCore {
     };
   }
 
+  pullAudio(maxFrames = 1024) {
+    if (typeof this.e["audio_available_frames"] !== "function")
+      return { frames: 0, channels: 2, sampleRate: 32000, samples: new Int16Array(0) };
+    let remain = Math.min(this.e["audio_available_frames"]() as number, maxFrames);
+    const chunks: Int16Array[] = [];
+    while (remain > 0) {
+      const n = Math.min(remain, this.e["audio_peek_contiguous_frames"]() as number);
+      if (!n) break;
+      chunks.push(new Int16Array(this.memory.buffer, this.e["audio_peek_ptr"](), n * 2).slice());
+      this.e["audio_consume"](n);
+      remain -= n;
+    }
+    const total = chunks.reduce((n, c) => n + c.length, 0);
+    const samples = new Int16Array(total);
+    let offset = 0;
+    for (const chunk of chunks) {
+      samples.set(chunk, offset);
+      offset += chunk.length;
+    }
+    return {
+      frames: total / 2,
+      channels: this.e["audio_channels"]() as number,
+      sampleRate: this.e["audio_sample_rate"]() as number,
+      samples,
+    };
+  }
+
   saveState(): Uint8Array {
     const n = this.e["save_state"]() as number;
     if (!n) throw new Error("Save state failed.");
