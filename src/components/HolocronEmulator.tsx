@@ -122,6 +122,29 @@ export function HolocronEmulator() {
     setStatus(pausedRef.current ? "paused" : "running");
   }, []);
 
+  const togglePower = useCallback(async () => {
+    if (!displayOff) {
+      // Power off: stop emulation and tear the core down.
+      try {
+        await coreRef.current?.shutdown();
+      } catch {
+        /* ignore */
+      }
+      coreRef.current = null;
+      pausedRef.current = false;
+      setAbi(null);
+      setStatus("idle");
+      setDisplayOff(true);
+      setLog("Emulator powered off.");
+      return;
+    }
+    // Power on: boot the core again and resume the loaded ROM if there is one.
+    setDisplayOff(false);
+    await boot();
+    if (romRef.current) await run();
+  }, [displayOff, boot, run]);
+
+
   const saveState = useCallback(async () => {
     try {
       const core = coreRef.current;
