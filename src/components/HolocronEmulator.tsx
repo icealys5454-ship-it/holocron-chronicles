@@ -1,7 +1,19 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 
 import { ControllerDiagnostics } from "@/components/ControllerDiagnostics";
+import { ControllerSettings } from "@/components/ControllerSettings";
 import { HolocronCore } from "@/lib/holocron/core";
+import {
+  BUTTON_LABELS,
+  SNES_BUTTONS,
+  keyLabel,
+  loadConfig,
+  saveConfig,
+  toRetroarchConfig,
+  type ControllerConfig,
+  DEFAULT_CONFIG,
+} from "@/lib/holocron/keymap";
+import { usePadKeyboardBridge } from "@/lib/holocron/padBridge";
 import { StateStore, type StateRecord } from "@/lib/holocron/storage";
 
 type Status = "idle" | "booting" | "ready" | "running" | "paused" | "error";
@@ -20,7 +32,18 @@ export function HolocronEmulator() {
   const [abi, setAbi] = useState<string | null>(null);
   const [romName, setRomName] = useState<string | null>(null);
   const [slots, setSlots] = useState<StateRecord[]>([]);
+  const [config, setConfig] = useState<ControllerConfig>(DEFAULT_CONFIG);
   const [log, setLog] = useState<string>("Boot the core, then load a ROM you legally own.");
+
+  useEffect(() => setConfig(loadConfig()), []);
+
+  const updateConfig = useCallback((next: ControllerConfig) => {
+    setConfig(next);
+    saveConfig(next);
+  }, []);
+
+  usePadKeyboardBridge(config, status === "running", canvasRef);
+
 
   const refreshSlots = useCallback(async () => {
     const store = storeRef.current;
