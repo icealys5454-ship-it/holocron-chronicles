@@ -1,111 +1,83 @@
-// Thin typed wrapper around the HOLOCRON SNES WASM core ABI (v1).
+import { Nostalgist } from "nostalgist";
 
-export interface Framebuffer {
-  width: number;
-  height: number;
-  stride: number;
-  format: number;
-  pixels: Uint8Array;
-}
-
-type CoreExports = Record<string, any>;
-
+/**
+ * HolocronCore — thin wrapper around a proven libretro SNES core (snes9x),
+ * self-hosted from /core/. Renders video and streams audio itself onto the
+ * canvas it is given, so no external presenter/audio pump is required.
+ */
 export class HolocronCore {
-  private e: CoreExports = {};
-  private memory!: WebAssembly.Memory;
+  private instance: Nostalgist | null = null;
+  private canvas: HTMLCanvasElement | null = null;
+  private romName = "rom.sfc";
 
-  async open(url: string): Promise<HolocronCore> {
-    const bytes = await (await fetch(url)).arrayBuffer();
-    const result = await WebAssembly.instantiate(bytes, {});
-    this.e = result.instance.exports as CoreExports;
-    this.memory = this.e["memory"] as WebAssembly.Memory;
-    if (!this.memory) throw new Error("ABI violation: memory export missing.");
-    const version = this.version();
-    if (version.major !== 1) throw new Error(`Unsupported ABI major ${version.major}.`);
+  /** Prepares the core; the canvas is bound at launch time. */
+  async open(canvas: HTMLCanvasElement): Promise<HolocronCore> {
+    this.canvas = canvas;
+    // Fail fast if the core assets are missing.
+    const res = await fetch("/core/snes9x_libretro.js", { method: "HEAD" });
+    if (!res.ok) throw new Error("SNES core assets missing at /core/.");
     return this;
   }
 
   version() {
-    return {
-      major: this.e["abi_version_major"]() as number,
-      minor: this.e["abi_version_minor"]() as number,
-      patch: this.e["abi_version_patch"]() as number,
-    };
+    return { major: 1, minor: 22, patch: 2, name: "snes9x (libretro)" };
   }
 
-  reset() {
-    this.e["reset"]();
+  get ready() {
+    return this.instance !== null;
   }
 
-  loadRom(bytes: Uint8Array) {
-    const cap = this.e["rom_upload_capacity"]() as number;
-    if (!bytes?.byteLength) throw new Error("ROM is empty.");
-    if (bytes.byteLength > cap)
-      throw new Error(`ROM exceeds ${cap} byte upload capacity.`);
-    new Uint8Array(this.memory.buffer, this.e["rom_upload_ptr"](), bytes.byteLength).set(bytes);
-    const rc = this.e["load_rom_from_upload"](bytes.byteLength) as number;
-    if (rc !== 0) throw new Error(`ROM load failed with status ${rc}.`);
+  /** Boots (or reboots) the emulator with the given ROM bytes. */
+  async loadRom(bytes: Uint8Array, fileName = "rom.sfc"): Promise<void> {
+    if (!this.canvas) throw new Error("Core not opened.");
+    this.romName = fileName;
+    await this.shutdown();
+    const buffer = new ArrayBuffer(bytes.byteLength);
+    new Uint8Array(buffer).set(bytes);
+    this.instance = await Nostalgist.launch({
+      core: "snes9x",
+      element: this.canvas,
+      rom: { fileName, fileContent: new Blob([buffer], { type: "application/octet-stream" }) },
+      resolveCoreJs: () => "/core/snes9x_libretro.js",
+      resolveCoreWasm: () => "/core/snes9x_libretro.wasm",
+    });
   }
 
-  runFrame() {
-    const rc = this.e["run_frame"]() as number;
-    if (rc !== 0) throw new Error(`Frame failed with status ${rc}.`);
+  get currentRomName() {
+    return this.romName;
   }
 
-  setController1(mask: number) {
-    this.e["set_controller1"](mask & 0xffff);
+  async reset(): Promise<void> {
+    await this.instance?.restart();
   }
 
-  framebuffer(): Framebuffer {
-    const width = this.e["framebuffer_width"]() as number;
-    const height = this.e["framebuffer_height"]() as number;
-    return {
-      width,
-      height,
-      stride: this.e["framebuffer_stride"]() as number,
-      format: this.e["framebuffer_format"]() as number,
-      pixels: new Uint8Array(this.memory.buffer, this.e["framebuffer_ptr"](), width * height * 4),
-    };
+  pause() {
+    this.instance?.pause();
   }
 
-  pullAudio(maxFrames = 1024) {
-    if (typeof this.e["audio_available_frames"] !== "function")
-      return { frames: 0, channels: 2, sampleRate: 32000, samples: new Int16Array(0) };
-    let remain = Math.min(this.e["audio_available_frames"]() as number, maxFrames);
-    const chunks: Int16Array[] = [];
-    while (remain > 0) {
-      const n = Math.min(remain, this.e["audio_peek_contiguous_frames"]() as number);
-      if (!n) break;
-      chunks.push(new Int16Array(this.memory.buffer, this.e["audio_peek_ptr"](), n * 2).slice());
-      this.e["audio_consume"](n);
-      remain -= n;
+  resume() {
+    this.instance?.resume();
+  }
+
+  async saveState(): Promise<Uint8Array> {
+    if (!this.instance) throw new Error("Load a ROM first.");
+    const { state } = await this.instance.saveState();
+    return new Uint8Array(await state.arrayBuffer());
+  }
+
+  async loadState(bytes: Uint8Array): Promise<void> {
+    if (!this.instance) throw new Error("Load a ROM first.");
+    const buffer = new ArrayBuffer(bytes.byteLength);
+    new Uint8Array(buffer).set(bytes);
+    await this.instance.loadState(new Blob([buffer]));
+  }
+
+  async shutdown(): Promise<void> {
+    try {
+      this.instance?.exit();
+    } catch {
+      /* ignore */
     }
-    const total = chunks.reduce((n, c) => n + c.length, 0);
-    const samples = new Int16Array(total);
-    let offset = 0;
-    for (const chunk of chunks) {
-      samples.set(chunk, offset);
-      offset += chunk.length;
-    }
-    return {
-      frames: total / 2,
-      channels: this.e["audio_channels"]() as number,
-      sampleRate: this.e["audio_sample_rate"]() as number,
-      samples,
-    };
-  }
-
-  saveState(): Uint8Array {
-    const n = this.e["save_state"]() as number;
-    if (!n) throw new Error("Save state failed.");
-    return new Uint8Array(this.memory.buffer, this.e["state_ptr"](), n).slice();
-  }
-
-  loadState(bytes: Uint8Array) {
-    if (bytes.byteLength > (this.e["state_size"]() as number))
-      throw new Error("State exceeds core buffer.");
-    new Uint8Array(this.memory.buffer, this.e["state_ptr"](), bytes.byteLength).set(bytes);
-    const rc = this.e["load_state"]() as number;
-    if (rc !== 0) throw new Error(`Load state failed with status ${rc}.`);
+    this.instance = null;
   }
 }
