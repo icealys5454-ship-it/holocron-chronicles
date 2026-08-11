@@ -309,8 +309,8 @@ export function HolocronEmulator() {
 
 
   return (
-    <div className="grid gap-6 lg:grid-cols-[1fr_320px]">
-      <section className="rounded-xl border border-border bg-card p-4">
+    <div className="grid grid-cols-1 gap-6 lg:grid-cols-[minmax(0,1fr)_360px]">
+      <section className="min-w-0 rounded-xl border border-border bg-card p-4">
         <div
           ref={stageRef}
           className="relative flex h-[min(85dvh,calc(100vw*0.75))] w-full items-center justify-center overflow-hidden rounded-lg bg-black"
