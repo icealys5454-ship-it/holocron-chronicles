@@ -265,6 +265,33 @@ export function HolocronEmulator() {
         <pre className="mt-3 min-h-40 whitespace-pre-wrap rounded-md bg-muted p-3 text-sm text-muted-foreground">
           {log}
         </pre>
+        <h3 className="mt-4 text-sm font-semibold text-card-foreground">Persistent slots</h3>
+        <div className="mt-2 space-y-2">
+          {SLOTS.map((slot) => {
+            const record = slots.find((s) => s.id === `slot-${slot}`);
+            return (
+              <div key={slot} className="flex items-center gap-2">
+                <span className="w-14 text-sm text-muted-foreground">Slot {slot}</span>
+                <button className={btnBase + " px-3 py-1"} onClick={() => void saveSlot(slot)}>
+                  Save
+                </button>
+                <button
+                  className={btnBase + " px-3 py-1"}
+                  onClick={() => void loadSlot(slot)}
+                  disabled={!record}
+                >
+                  Load
+                </button>
+                <span className="truncate text-xs text-muted-foreground">
+                  {record
+                    ? `${record.romName} · ${new Date(record.createdAt).toLocaleString()}`
+                    : "empty"}
+                </span>
+              </div>
+            );
+          })}
+        </div>
+
         <h3 className="mt-4 text-sm font-semibold text-card-foreground">Keyboard</h3>
         <ul className="mt-2 space-y-1 text-sm text-muted-foreground">
           <li>Arrows / WASD — D-pad</li>
