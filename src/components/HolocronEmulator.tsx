@@ -1,7 +1,19 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 
 import { ControllerDiagnostics } from "@/components/ControllerDiagnostics";
+import { ControllerSettings } from "@/components/ControllerSettings";
 import { HolocronCore } from "@/lib/holocron/core";
+import {
+  BUTTON_LABELS,
+  SNES_BUTTONS,
+  keyLabel,
+  loadConfig,
+  saveConfig,
+  toRetroarchConfig,
+  type ControllerConfig,
+  DEFAULT_CONFIG,
+} from "@/lib/holocron/keymap";
+import { usePadKeyboardBridge } from "@/lib/holocron/padBridge";
 import { StateStore, type StateRecord } from "@/lib/holocron/storage";
 
 type Status = "idle" | "booting" | "ready" | "running" | "paused" | "error";
@@ -20,7 +32,18 @@ export function HolocronEmulator() {
   const [abi, setAbi] = useState<string | null>(null);
   const [romName, setRomName] = useState<string | null>(null);
   const [slots, setSlots] = useState<StateRecord[]>([]);
+  const [config, setConfig] = useState<ControllerConfig>(DEFAULT_CONFIG);
   const [log, setLog] = useState<string>("Boot the core, then load a ROM you legally own.");
+
+  useEffect(() => setConfig(loadConfig()), []);
+
+  const updateConfig = useCallback((next: ControllerConfig) => {
+    setConfig(next);
+    saveConfig(next);
+  }, []);
+
+  usePadKeyboardBridge(config, status === "running", canvasRef);
+
 
   const refreshSlots = useCallback(async () => {
     const store = storeRef.current;
@@ -76,7 +99,7 @@ export function HolocronEmulator() {
       if (!core) throw new Error("Boot the core first.");
       if (!romRef.current) throw new Error("Select a homebrew or user-owned ROM first.");
       setLog("Starting emulation…");
-      await core.loadRom(romRef.current, romName ?? "rom.sfc");
+      await core.loadRom(romRef.current, romName ?? "rom.sfc", toRetroarchConfig(config.keys));
       pausedRef.current = false;
       setStatus("running");
       setLog("Running. Click the screen so keyboard input is captured.");
@@ -85,7 +108,8 @@ export function HolocronEmulator() {
       setStatus("error");
       setLog(String(err));
     }
-  }, [romName]);
+  }, [romName, config.keys]);
+
 
   const pause = useCallback(() => {
     const core = coreRef.current;
@@ -197,7 +221,9 @@ export function HolocronEmulator() {
           <button onClick={() => void loadState()} className={btnBase}>
             Load state
           </button>
+          <ControllerSettings config={config} onChange={updateConfig} />
         </div>
+
       </section>
 
       <section className="rounded-xl border border-border bg-card p-4">
@@ -235,13 +261,21 @@ export function HolocronEmulator() {
           })}
         </div>
 
-        <h3 className="mt-4 text-sm font-semibold text-card-foreground">Keyboard</h3>
-        <ul className="mt-2 space-y-1 text-sm text-muted-foreground">
-          <li>Arrows — D-pad</li>
-          <li>Z / X — B / A · A / S — Y / X</li>
-          <li>Q / W — L / R · Enter — Start · Shift — Select</li>
-          <li>Gamepads are supported automatically.</li>
+        <h3 className="mt-4 text-sm font-semibold text-card-foreground">Current bindings</h3>
+        <ul className="mt-2 grid grid-cols-2 gap-x-4 gap-y-1 text-xs text-muted-foreground">
+          {SNES_BUTTONS.map((button) => (
+            <li key={button} className="flex justify-between gap-2">
+              <span>{BUTTON_LABELS[button]}</span>
+              <span className="text-card-foreground">{keyLabel(config.keys[button])}</span>
+            </li>
+          ))}
         </ul>
+        <p className="mt-2 text-xs text-muted-foreground">
+          {config.padEnabled
+            ? "Connected gamepads are mapped onto these keys."
+            : "Gamepad-to-keyboard mapping is off."}
+        </p>
+
 
         <ControllerDiagnostics />
       </section>

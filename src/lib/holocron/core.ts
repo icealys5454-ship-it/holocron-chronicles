@@ -28,7 +28,11 @@ export class HolocronCore {
   }
 
   /** Boots (or reboots) the emulator with the given ROM bytes. */
-  async loadRom(bytes: Uint8Array, fileName = "rom.sfc"): Promise<void> {
+  async loadRom(
+    bytes: Uint8Array,
+    fileName = "rom.sfc",
+    retroarchConfig: Record<string, string> = {},
+  ): Promise<void> {
     if (!this.canvas) throw new Error("Core not opened.");
     this.romName = fileName;
     await this.shutdown();
@@ -38,10 +42,12 @@ export class HolocronCore {
       core: "snes9x",
       element: this.canvas,
       rom: { fileName, fileContent: new Blob([buffer], { type: "application/octet-stream" }) },
+      retroarchConfig,
       resolveCoreJs: () => "/core/snes9x_libretro.js",
       resolveCoreWasm: () => "/core/snes9x_libretro.wasm",
     });
   }
+
 
   get currentRomName() {
     return this.romName;
