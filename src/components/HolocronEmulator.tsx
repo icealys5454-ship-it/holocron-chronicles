@@ -221,7 +221,9 @@ export function HolocronEmulator() {
           <button onClick={() => void loadState()} className={btnBase}>
             Load state
           </button>
+          <ControllerSettings config={config} onChange={updateConfig} />
         </div>
+
       </section>
 
       <section className="rounded-xl border border-border bg-card p-4">
