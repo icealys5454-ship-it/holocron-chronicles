@@ -369,6 +369,22 @@ export function HolocronEmulator() {
           <button onClick={() => void loadState()} className={btnBase}>
             Load state
           </button>
+          <button onClick={() => void downloadState()} className={btnBase}>
+            Download state
+          </button>
+          <label className={btnBase + " cursor-pointer"}>
+            Upload state
+            <input
+              type="file"
+              accept=".state,.sav,.bin"
+              className="hidden"
+              onChange={(e) => {
+                void uploadState(e.target.files?.[0]);
+                e.currentTarget.value = "";
+              }}
+            />
+          </label>
+
           <ControllerSettings config={config} onChange={updateConfig} />
         </div>
 
