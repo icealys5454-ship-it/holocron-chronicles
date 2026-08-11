@@ -261,13 +261,21 @@ export function HolocronEmulator() {
           })}
         </div>
 
-        <h3 className="mt-4 text-sm font-semibold text-card-foreground">Keyboard</h3>
-        <ul className="mt-2 space-y-1 text-sm text-muted-foreground">
-          <li>Arrows — D-pad</li>
-          <li>Z / X — B / A · A / S — Y / X</li>
-          <li>Q / W — L / R · Enter — Start · Shift — Select</li>
-          <li>Gamepads are supported automatically.</li>
+        <h3 className="mt-4 text-sm font-semibold text-card-foreground">Current bindings</h3>
+        <ul className="mt-2 grid grid-cols-2 gap-x-4 gap-y-1 text-xs text-muted-foreground">
+          {SNES_BUTTONS.map((button) => (
+            <li key={button} className="flex justify-between gap-2">
+              <span>{BUTTON_LABELS[button]}</span>
+              <span className="text-card-foreground">{keyLabel(config.keys[button])}</span>
+            </li>
+          ))}
         </ul>
+        <p className="mt-2 text-xs text-muted-foreground">
+          {config.padEnabled
+            ? "Connected gamepads are mapped onto these keys."
+            : "Gamepad-to-keyboard mapping is off."}
+        </p>
+
 
         <ControllerDiagnostics />
       </section>
