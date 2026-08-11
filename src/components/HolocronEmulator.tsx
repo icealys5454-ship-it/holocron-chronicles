@@ -207,6 +207,96 @@ export function HolocronEmulator() {
     }
   }, []);
 
+  const downloadBytes = useCallback((bytes: Uint8Array, fileName: string) => {
+    const buffer = new ArrayBuffer(bytes.byteLength);
+    new Uint8Array(buffer).set(bytes);
+    const url = URL.createObjectURL(new Blob([buffer], { type: "application/octet-stream" }));
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = fileName;
+    a.click();
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+  }, []);
+
+  const stateFileName = useCallback(
+    (suffix: string) => {
+      const base = (romName ?? "state").replace(/\.[^.]+$/, "");
+      return `${base}.${suffix}.state`;
+    },
+    [romName],
+  );
+
+  /** Download the live emulator snapshot as a .state file. */
+  const downloadState = useCallback(async () => {
+    try {
+      const core = coreRef.current;
+      if (!core) throw new Error("Boot the core first.");
+      const bytes = await core.saveState();
+      stateRef.current = bytes;
+      downloadBytes(bytes, stateFileName(String(Date.now())));
+      setLog(`Downloaded snapshot (${bytes.length} bytes).`);
+    } catch (err) {
+      setLog(String(err));
+    }
+  }, [downloadBytes, stateFileName]);
+
+  /** Upload a .state file and restore it into the running core. */
+  const uploadState = useCallback(async (file: File | undefined) => {
+    if (!file) return;
+    try {
+      const core = coreRef.current;
+      if (!core) throw new Error("Boot the core first.");
+      const bytes = new Uint8Array(await file.arrayBuffer());
+      await core.loadState(bytes);
+      stateRef.current = bytes;
+      setLog(`Restored snapshot from ${file.name} (${bytes.length} bytes).`);
+    } catch (err) {
+      setLog(String(err));
+    }
+  }, []);
+
+  /** Download a persistent slot's stored blob. */
+  const downloadSlot = useCallback(
+    async (slot: string) => {
+      try {
+        const store = storeRef.current;
+        if (!store) throw new Error("Persistent storage unavailable.");
+        const record = await store.get(`slot-${slot}`);
+        if (!record) throw new Error(`Slot ${slot} is empty.`);
+        const bytes = new Uint8Array(record.bytes);
+        const base = record.romName.replace(/\.[^.]+$/, "");
+        downloadBytes(bytes, `${base}.slot${slot}.state`);
+        setLog(`Slot ${slot} downloaded (${bytes.length} bytes).`);
+      } catch (err) {
+        setLog(String(err));
+      }
+    },
+    [downloadBytes],
+  );
+
+  /** Upload a .state file into a persistent slot (stored in IndexedDB). */
+  const uploadSlot = useCallback(
+    async (slot: string, file: File | undefined) => {
+      if (!file) return;
+      try {
+        const store = storeRef.current;
+        if (!store) throw new Error("Persistent storage unavailable.");
+        const bytes = new Uint8Array(await file.arrayBuffer());
+        await store.put({
+          id: `slot-${slot}`,
+          romName: romName ?? file.name,
+          createdAt: Date.now(),
+          bytes,
+        });
+        await refreshSlots();
+        setLog(`Slot ${slot} imported from ${file.name} (${bytes.length} bytes).`);
+      } catch (err) {
+        setLog(String(err));
+      }
+    },
+    [refreshSlots, romName],
+  );
+
   const toggleFullscreen = useCallback(() => {
     const stage = stageRef.current;
     if (!stage) return;
@@ -279,6 +369,22 @@ export function HolocronEmulator() {
           <button onClick={() => void loadState()} className={btnBase}>
             Load state
           </button>
+          <button onClick={() => void downloadState()} className={btnBase}>
+            Download state
+          </button>
+          <label className={btnBase + " cursor-pointer"}>
+            Upload state
+            <input
+              type="file"
+              accept=".state,.sav,.bin"
+              className="hidden"
+              onChange={(e) => {
+                void uploadState(e.target.files?.[0]);
+                e.currentTarget.value = "";
+              }}
+            />
+          </label>
+
           <ControllerSettings config={config} onChange={updateConfig} />
         </div>
 
@@ -309,6 +415,30 @@ export function HolocronEmulator() {
                 >
                   Load
                 </button>
+                <button
+                  className={btnBase + " px-3 py-1"}
+                  onClick={() => void downloadSlot(slot)}
+                  disabled={!record}
+                  title="Download this slot as a .state file"
+                >
+                  ↓
+                </button>
+                <label
+                  className={btnBase + " cursor-pointer px-3 py-1"}
+                  title="Upload a .state file into this slot"
+                >
+                  ↑
+                  <input
+                    type="file"
+                    accept=".state,.sav,.bin"
+                    className="hidden"
+                    onChange={(e) => {
+                      void uploadSlot(slot, e.target.files?.[0]);
+                      e.currentTarget.value = "";
+                    }}
+                  />
+                </label>
+
                 <span className="truncate text-xs text-muted-foreground">
                   {record
                     ? `${record.romName} · ${new Date(record.createdAt).toLocaleString()}`
