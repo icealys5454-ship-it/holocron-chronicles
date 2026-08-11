@@ -309,11 +309,11 @@ export function HolocronEmulator() {
 
 
   return (
-    <div className="grid gap-6 lg:grid-cols-[1.4fr_1fr]">
+    <div className="grid gap-6 lg:grid-cols-[2.5fr_1fr]">
       <section className="rounded-xl border border-border bg-card p-4">
         <div
           ref={stageRef}
-          className="relative flex h-[min(70dvh,calc(100vw*0.6))] w-full items-center justify-center overflow-hidden rounded-lg bg-black"
+          className="relative flex h-[min(80dvh,calc(100vw*0.65))] w-full items-center justify-center overflow-hidden rounded-lg bg-black"
         >
           <canvas
             ref={canvasRef}
