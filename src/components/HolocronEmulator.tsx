@@ -1,7 +1,9 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 
+import { AudioOutput } from "@/lib/holocron/audio";
 import { HolocronCore } from "@/lib/holocron/core";
 import { KeyboardInput, pollGamepadMask, type SnesButton } from "@/lib/holocron/input";
+import { StateStore, type StateRecord } from "@/lib/holocron/storage";
 import { WebGLPresenter } from "@/lib/holocron/webgl";
 
 type Status = "idle" | "booting" | "ready" | "running" | "paused" | "error";
@@ -13,11 +15,15 @@ const TOUCH_BUTTONS: { label: string; button: SnesButton }[] = [
   { label: "X", button: "X" },
 ];
 
+const SLOTS = ["1", "2", "3"];
+
 export function HolocronEmulator() {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const coreRef = useRef<HolocronCore | null>(null);
   const presenterRef = useRef<WebGLPresenter | null>(null);
   const keyboardRef = useRef<KeyboardInput | null>(null);
+  const audioRef = useRef<AudioOutput | null>(null);
+  const storeRef = useRef<StateStore | null>(null);
   const rafRef = useRef<number | null>(null);
   const runningRef = useRef(false);
   const pausedRef = useRef(false);
@@ -27,7 +33,9 @@ export function HolocronEmulator() {
   const [status, setStatus] = useState<Status>("idle");
   const [abi, setAbi] = useState<string | null>(null);
   const [romName, setRomName] = useState<string | null>(null);
+  const [slots, setSlots] = useState<StateRecord[]>([]);
   const [log, setLog] = useState<string>("Boot the core, then load a ROM you legally own.");
+
 
   useEffect(() => {
     const kb = new KeyboardInput().attach();
