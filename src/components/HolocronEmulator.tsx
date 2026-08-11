@@ -120,6 +120,7 @@ export function HolocronEmulator() {
       if (!romRef.current) throw new Error("Select a homebrew or user-owned ROM first.");
       core.reset();
       core.loadRom(romRef.current);
+      audioRef.current?.resume();
       pausedRef.current = false;
       if (!runningRef.current) {
         runningRef.current = true;
@@ -161,6 +162,45 @@ export function HolocronEmulator() {
       setLog(String(err));
     }
   }, []);
+
+  const saveSlot = useCallback(
+    async (slot: string) => {
+      try {
+        const core = coreRef.current;
+        const store = storeRef.current;
+        if (!core) throw new Error("Boot the core first.");
+        if (!store) throw new Error("Persistent storage unavailable.");
+        const bytes = core.saveState();
+        await store.put({
+          id: `slot-${slot}`,
+          romName: romName ?? "unknown",
+          createdAt: Date.now(),
+          bytes,
+        });
+        await refreshSlots();
+        setLog(`Slot ${slot} saved (${bytes.length} bytes).`);
+      } catch (err) {
+        setLog(String(err));
+      }
+    },
+    [refreshSlots, romName],
+  );
+
+  const loadSlot = useCallback(async (slot: string) => {
+    try {
+      const core = coreRef.current;
+      const store = storeRef.current;
+      if (!core) throw new Error("Boot the core first.");
+      if (!store) throw new Error("Persistent storage unavailable.");
+      const record = await store.get(`slot-${slot}`);
+      if (!record) throw new Error(`Slot ${slot} is empty.`);
+      core.loadState(new Uint8Array(record.bytes));
+      setLog(`Slot ${slot} restored (${record.romName}).`);
+    } catch (err) {
+      setLog(String(err));
+    }
+  }, []);
+
 
   const btnBase =
     "rounded-md border border-border bg-secondary px-4 py-2 text-sm font-medium text-secondary-foreground transition-colors hover:bg-accent disabled:opacity-40";
