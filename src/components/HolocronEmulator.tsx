@@ -237,7 +237,7 @@ export function HolocronEmulator() {
           />
           {displayOff && (
             <span className="pointer-events-none absolute text-xs uppercase tracking-widest text-muted-foreground">
-              Display off
+              Emulator off
             </span>
           )}
         </div>
