@@ -99,7 +99,7 @@ export function HolocronEmulator() {
       if (!core) throw new Error("Boot the core first.");
       if (!romRef.current) throw new Error("Select a homebrew or user-owned ROM first.");
       setLog("Starting emulation…");
-      await core.loadRom(romRef.current, romName ?? "rom.sfc");
+      await core.loadRom(romRef.current, romName ?? "rom.sfc", toRetroarchConfig(config.keys));
       pausedRef.current = false;
       setStatus("running");
       setLog("Running. Click the screen so keyboard input is captured.");
@@ -108,7 +108,8 @@ export function HolocronEmulator() {
       setStatus("error");
       setLog(String(err));
     }
-  }, [romName]);
+  }, [romName, config.keys]);
+
 
   const pause = useCallback(() => {
     const core = coreRef.current;
