@@ -220,12 +220,14 @@ export function HolocronEmulator() {
         </div>
         <div className="mt-4 flex flex-wrap items-center gap-2">
           <button
-            onClick={() => setDisplayOff((v) => !v)}
+            onClick={() => void togglePower()}
             className={btnBase}
-            aria-pressed={displayOff}
+            disabled={status === "booting"}
+            aria-pressed={!displayOff}
           >
-            {displayOff ? "Turn display on" : "Turn display off"}
+            {displayOff ? "Turn emulator on" : "Turn emulator off"}
           </button>
+
           <button onClick={toggleFullscreen} className={btnBase}>
             Fullscreen
           </button>
