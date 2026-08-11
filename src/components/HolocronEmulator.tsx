@@ -36,12 +36,26 @@ export function HolocronEmulator() {
   const [slots, setSlots] = useState<StateRecord[]>([]);
   const [log, setLog] = useState<string>("Boot the core, then load a ROM you legally own.");
 
+  const refreshSlots = useCallback(async () => {
+    const store = storeRef.current;
+    if (!store) return;
+    setSlots(await store.list());
+  }, []);
 
   useEffect(() => {
     const kb = new KeyboardInput().attach();
     keyboardRef.current = kb;
+    audioRef.current = new AudioOutput();
+    void new StateStore()
+      .open()
+      .then(async (store) => {
+        storeRef.current = store;
+        setSlots(await store.list());
+      })
+      .catch(() => undefined);
     return () => {
       kb.detach();
+      audioRef.current?.close();
       runningRef.current = false;
       if (rafRef.current !== null) cancelAnimationFrame(rafRef.current);
     };
@@ -57,6 +71,8 @@ export function HolocronEmulator() {
         core.setController1(mask);
         core.runFrame();
         presenter.present(core.framebuffer());
+        const audio = core.pullAudio();
+        if (audio.frames) audioRef.current?.push(audio);
       } catch (err) {
         runningRef.current = false;
         setStatus("error");
@@ -66,6 +82,7 @@ export function HolocronEmulator() {
     }
     rafRef.current = requestAnimationFrame(frameLoop);
   }, []);
+
 
   const boot = useCallback(async () => {
     setStatus("booting");
