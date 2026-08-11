@@ -188,15 +188,23 @@ export function HolocronEmulator() {
   return (
     <div className="grid gap-6 lg:grid-cols-[1.4fr_1fr]">
       <section className="rounded-xl border border-border bg-card p-4">
-        <canvas
-          ref={canvasRef}
-          width={256}
-          height={224}
-          tabIndex={0}
-          className="block w-full max-w-3xl rounded-lg bg-black outline-none"
-          style={{ aspectRatio: "8 / 7", imageRendering: "pixelated" }}
-        />
+        <div
+          ref={stageRef}
+          className="flex h-[min(70dvh,calc(100vw*0.6))] w-full items-center justify-center overflow-hidden rounded-lg bg-black"
+        >
+          <canvas
+            ref={canvasRef}
+            width={256}
+            height={224}
+            tabIndex={0}
+            className="h-full w-full object-contain outline-none"
+            style={{ imageRendering: "pixelated" }}
+          />
+        </div>
         <div className="mt-4 flex flex-wrap items-center gap-2">
+          <button onClick={toggleFullscreen} className={btnBase}>
+            Fullscreen
+          </button>
           <button onClick={() => void boot()} className={btnBase} disabled={status === "booting"}>
             {coreRef.current ? "Reboot core" : "Boot core"}
           </button>
