@@ -199,21 +199,36 @@ export function HolocronEmulator() {
       <section className="rounded-xl border border-border bg-card p-4">
         <div
           ref={stageRef}
-          className="flex h-[min(70dvh,calc(100vw*0.6))] w-full items-center justify-center overflow-hidden rounded-lg bg-black"
+          className="relative flex h-[min(70dvh,calc(100vw*0.6))] w-full items-center justify-center overflow-hidden rounded-lg bg-black"
         >
           <canvas
             ref={canvasRef}
             width={256}
             height={224}
             tabIndex={0}
-            className="h-full w-full object-contain outline-none"
+            className={
+              "h-full w-full object-contain outline-none" + (displayOff ? " invisible" : "")
+            }
             style={{ imageRendering: "pixelated" }}
           />
+          {displayOff && (
+            <span className="pointer-events-none absolute text-xs uppercase tracking-widest text-muted-foreground">
+              Display off
+            </span>
+          )}
         </div>
         <div className="mt-4 flex flex-wrap items-center gap-2">
+          <button
+            onClick={() => setDisplayOff((v) => !v)}
+            className={btnBase}
+            aria-pressed={displayOff}
+          >
+            {displayOff ? "Turn display on" : "Turn display off"}
+          </button>
           <button onClick={toggleFullscreen} className={btnBase}>
             Fullscreen
           </button>
+
           <button onClick={() => void boot()} className={btnBase} disabled={status === "booting"}>
             {coreRef.current ? "Reboot core" : "Boot core"}
           </button>
