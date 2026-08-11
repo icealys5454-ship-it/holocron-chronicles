@@ -317,8 +317,8 @@ export function HolocronEmulator() {
         >
           <canvas
             ref={canvasRef}
-            width={256}
-            height={224}
+            width={800}
+            height={600}
             tabIndex={0}
             className={
               "h-full w-full object-contain outline-none" + (displayOff ? " invisible" : "")
