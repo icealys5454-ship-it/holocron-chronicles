@@ -1,24 +1,52 @@
 import { createFileRoute } from "@tanstack/react-router";
 
-// No head() here: the home route inherits title/description/og/twitter from
-// __root.tsx, and ships no og:image so serve-time hosting can inject the
-// project's social preview (explicit og:image or latest screenshot).
+import logo from "@/assets/holocron-logo.jpg";
+import { HolocronEmulator } from "@/components/HolocronEmulator";
+
 export const Route = createFileRoute("/")({
+  head: () => ({
+    meta: [
+      { title: "HOLOCRON SNES Emulator — Play in your browser" },
+      {
+        name: "description",
+        content:
+          "Run the HOLOCRON WebAssembly SNES core in your browser: load a ROM you own, play with keyboard or gamepad, and save states instantly.",
+      },
+      { property: "og:title", content: "HOLOCRON SNES Emulator — Play in your browser" },
+      {
+        property: "og:description",
+        content:
+          "WebAssembly SNES core with WebGL output, keyboard and gamepad input, and instant save states.",
+      },
+    ],
+  }),
   component: Index,
 });
 
-// IMPORTANT: Replace this placeholder. See ./README.md for routing conventions.
 function Index() {
   return (
-    <div
-      className="flex min-h-screen items-center justify-center"
-      style={{ backgroundColor: "#fcfbf8" }}
-    >
-      <img
-        data-lovable-blank-page-placeholder="REMOVE_THIS"
-        src="https://cdn.gpteng.co/blank-app-v1.svg"
-        alt="Your app will live here!"
-      />
-    </div>
+    <main className="min-h-screen bg-background px-4 py-8">
+      <div className="mx-auto max-w-6xl">
+        <header className="mb-8 flex items-center gap-4">
+          <img
+            src={logo}
+            alt="HOLOCRON emulator logo"
+            className="h-14 w-14 rounded-lg object-cover"
+          />
+          <div>
+            <h1 className="text-2xl font-bold tracking-tight text-foreground">
+              HOLOCRON SNES Emulator
+            </h1>
+            <p className="text-sm text-muted-foreground">
+              WebAssembly core · WebGL output · keyboard &amp; gamepad input
+            </p>
+          </div>
+        </header>
+        <HolocronEmulator />
+        <p className="mt-6 text-xs text-muted-foreground">
+          Load only homebrew or ROMs you legally own. No ROMs are bundled or distributed.
+        </p>
+      </div>
+    </main>
   );
 }
