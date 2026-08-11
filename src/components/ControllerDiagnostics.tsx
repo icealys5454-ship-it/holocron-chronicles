@@ -32,7 +32,7 @@ export function ControllerDiagnostics() {
               <span className="ml-2 text-muted-foreground">
                 {p.buttons}b/{p.axes}a · {p.mapping} · since {time(p.connectedAt)}
               </span>
-              <div className="truncate text-muted-foreground">{p.id}</div>
+              <div className="break-all text-muted-foreground">{p.id}</div>
             </li>
           ))}
         </ul>

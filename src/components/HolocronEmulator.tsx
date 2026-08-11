@@ -309,8 +309,8 @@ export function HolocronEmulator() {
 
 
   return (
-    <div className="grid gap-6 lg:grid-cols-[1fr_320px]">
-      <section className="rounded-xl border border-border bg-card p-4">
+    <div className="grid grid-cols-1 gap-6 lg:grid-cols-[minmax(0,1fr)_360px]">
+      <section className="min-w-0 rounded-xl border border-border bg-card p-4">
         <div
           ref={stageRef}
           className="relative flex h-[min(85dvh,calc(100vw*0.75))] w-full items-center justify-center overflow-hidden rounded-lg bg-black"
@@ -390,7 +390,7 @@ export function HolocronEmulator() {
 
       </section>
 
-      <section className="rounded-xl border border-border bg-card p-4">
+      <section className="min-w-0 rounded-xl border border-border bg-card p-4">
         <h2 className="text-lg font-semibold text-card-foreground">
           {status.toUpperCase()}
           {abi ? <span className="ml-2 text-sm text-muted-foreground">{abi}</span> : null}
@@ -403,47 +403,50 @@ export function HolocronEmulator() {
           {SLOTS.map((slot) => {
             const record = slots.find((s) => s.id === `slot-${slot}`);
             return (
-              <div key={slot} className="flex items-center gap-2">
-                <span className="w-14 text-sm text-muted-foreground">Slot {slot}</span>
-                <button className={btnBase + " px-3 py-1"} onClick={() => void saveSlot(slot)}>
-                  Save
-                </button>
-                <button
-                  className={btnBase + " px-3 py-1"}
-                  onClick={() => void loadSlot(slot)}
-                  disabled={!record}
-                >
-                  Load
-                </button>
-                <button
-                  className={btnBase + " px-3 py-1"}
-                  onClick={() => void downloadSlot(slot)}
-                  disabled={!record}
-                  title="Download this slot as a .state file"
-                >
-                  ↓
-                </button>
-                <label
-                  className={btnBase + " cursor-pointer px-3 py-1"}
-                  title="Upload a .state file into this slot"
-                >
-                  ↑
-                  <input
-                    type="file"
-                    accept=".state,.sav,.bin"
-                    className="hidden"
-                    onChange={(e) => {
-                      void uploadSlot(slot, e.target.files?.[0]);
-                      e.currentTarget.value = "";
-                    }}
-                  />
-                </label>
-
-                <span className="truncate text-xs text-muted-foreground">
+              <div key={slot} className="grid gap-1">
+                <div className="flex flex-wrap items-center gap-2">
+                  <span className="text-sm font-medium text-muted-foreground">Slot {slot}</span>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <button className={btnBase + " px-3 py-1"} onClick={() => void saveSlot(slot)}>
+                      Save
+                    </button>
+                    <button
+                      className={btnBase + " px-3 py-1"}
+                      onClick={() => void loadSlot(slot)}
+                      disabled={!record}
+                    >
+                      Load
+                    </button>
+                    <button
+                      className={btnBase + " px-3 py-1"}
+                      onClick={() => void downloadSlot(slot)}
+                      disabled={!record}
+                      title="Download this slot as a .state file"
+                    >
+                      ↓
+                    </button>
+                    <label
+                      className={btnBase + " cursor-pointer px-3 py-1"}
+                      title="Upload a .state file into this slot"
+                    >
+                      ↑
+                      <input
+                        type="file"
+                        accept=".state,.sav,.bin"
+                        className="hidden"
+                        onChange={(e) => {
+                          void uploadSlot(slot, e.target.files?.[0]);
+                          e.currentTarget.value = "";
+                        }}
+                      />
+                    </label>
+                  </div>
+                </div>
+                <p className="text-xs text-muted-foreground break-all">
                   {record
                     ? `${record.romName} · ${new Date(record.createdAt).toLocaleString()}`
                     : "empty"}
-                </span>
+                </p>
               </div>
             );
           })}
