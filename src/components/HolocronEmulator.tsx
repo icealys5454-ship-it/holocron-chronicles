@@ -390,7 +390,7 @@ export function HolocronEmulator() {
 
       </section>
 
-      <section className="rounded-xl border border-border bg-card p-4">
+      <section className="min-w-0 rounded-xl border border-border bg-card p-4">
         <h2 className="text-lg font-semibold text-card-foreground">
           {status.toUpperCase()}
           {abi ? <span className="ml-2 text-sm text-muted-foreground">{abi}</span> : null}
