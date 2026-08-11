@@ -183,8 +183,16 @@ export function HolocronEmulator() {
     }
   }, []);
 
+  const toggleFullscreen = useCallback(() => {
+    const stage = stageRef.current;
+    if (!stage) return;
+    if (document.fullscreenElement) void document.exitFullscreen();
+    else void stage.requestFullscreen().then(() => canvasRef.current?.focus());
+  }, []);
+
   const btnBase =
     "rounded-md border border-border bg-secondary px-4 py-2 text-sm font-medium text-secondary-foreground transition-colors hover:bg-accent disabled:opacity-40";
+
 
   return (
     <div className="grid gap-6 lg:grid-cols-[1.4fr_1fr]">
