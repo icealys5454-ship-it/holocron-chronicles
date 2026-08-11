@@ -22,6 +22,7 @@ const SLOTS = ["1", "2", "3"];
 
 export function HolocronEmulator() {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
+  const stageRef = useRef<HTMLDivElement | null>(null);
   const coreRef = useRef<HolocronCore | null>(null);
   const storeRef = useRef<StateStore | null>(null);
   const pausedRef = useRef(false);
