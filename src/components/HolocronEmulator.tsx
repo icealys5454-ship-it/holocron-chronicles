@@ -1,7 +1,9 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 
+import { AudioOutput } from "@/lib/holocron/audio";
 import { HolocronCore } from "@/lib/holocron/core";
 import { KeyboardInput, pollGamepadMask, type SnesButton } from "@/lib/holocron/input";
+import { StateStore, type StateRecord } from "@/lib/holocron/storage";
 import { WebGLPresenter } from "@/lib/holocron/webgl";
 
 type Status = "idle" | "booting" | "ready" | "running" | "paused" | "error";
@@ -13,11 +15,15 @@ const TOUCH_BUTTONS: { label: string; button: SnesButton }[] = [
   { label: "X", button: "X" },
 ];
 
+const SLOTS = ["1", "2", "3"];
+
 export function HolocronEmulator() {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const coreRef = useRef<HolocronCore | null>(null);
   const presenterRef = useRef<WebGLPresenter | null>(null);
   const keyboardRef = useRef<KeyboardInput | null>(null);
+  const audioRef = useRef<AudioOutput | null>(null);
+  const storeRef = useRef<StateStore | null>(null);
   const rafRef = useRef<number | null>(null);
   const runningRef = useRef(false);
   const pausedRef = useRef(false);
@@ -27,13 +33,29 @@ export function HolocronEmulator() {
   const [status, setStatus] = useState<Status>("idle");
   const [abi, setAbi] = useState<string | null>(null);
   const [romName, setRomName] = useState<string | null>(null);
+  const [slots, setSlots] = useState<StateRecord[]>([]);
   const [log, setLog] = useState<string>("Boot the core, then load a ROM you legally own.");
+
+  const refreshSlots = useCallback(async () => {
+    const store = storeRef.current;
+    if (!store) return;
+    setSlots(await store.list());
+  }, []);
 
   useEffect(() => {
     const kb = new KeyboardInput().attach();
     keyboardRef.current = kb;
+    audioRef.current = new AudioOutput();
+    void new StateStore()
+      .open()
+      .then(async (store) => {
+        storeRef.current = store;
+        setSlots(await store.list());
+      })
+      .catch(() => undefined);
     return () => {
       kb.detach();
+      audioRef.current?.close();
       runningRef.current = false;
       if (rafRef.current !== null) cancelAnimationFrame(rafRef.current);
     };
@@ -49,6 +71,8 @@ export function HolocronEmulator() {
         core.setController1(mask);
         core.runFrame();
         presenter.present(core.framebuffer());
+        const audio = core.pullAudio();
+        if (audio.frames) audioRef.current?.push(audio);
       } catch (err) {
         runningRef.current = false;
         setStatus("error");
@@ -58,6 +82,7 @@ export function HolocronEmulator() {
     }
     rafRef.current = requestAnimationFrame(frameLoop);
   }, []);
+
 
   const boot = useCallback(async () => {
     setStatus("booting");
@@ -95,6 +120,7 @@ export function HolocronEmulator() {
       if (!romRef.current) throw new Error("Select a homebrew or user-owned ROM first.");
       core.reset();
       core.loadRom(romRef.current);
+      audioRef.current?.resume();
       pausedRef.current = false;
       if (!runningRef.current) {
         runningRef.current = true;
@@ -136,6 +162,45 @@ export function HolocronEmulator() {
       setLog(String(err));
     }
   }, []);
+
+  const saveSlot = useCallback(
+    async (slot: string) => {
+      try {
+        const core = coreRef.current;
+        const store = storeRef.current;
+        if (!core) throw new Error("Boot the core first.");
+        if (!store) throw new Error("Persistent storage unavailable.");
+        const bytes = core.saveState();
+        await store.put({
+          id: `slot-${slot}`,
+          romName: romName ?? "unknown",
+          createdAt: Date.now(),
+          bytes,
+        });
+        await refreshSlots();
+        setLog(`Slot ${slot} saved (${bytes.length} bytes).`);
+      } catch (err) {
+        setLog(String(err));
+      }
+    },
+    [refreshSlots, romName],
+  );
+
+  const loadSlot = useCallback(async (slot: string) => {
+    try {
+      const core = coreRef.current;
+      const store = storeRef.current;
+      if (!core) throw new Error("Boot the core first.");
+      if (!store) throw new Error("Persistent storage unavailable.");
+      const record = await store.get(`slot-${slot}`);
+      if (!record) throw new Error(`Slot ${slot} is empty.`);
+      core.loadState(new Uint8Array(record.bytes));
+      setLog(`Slot ${slot} restored (${record.romName}).`);
+    } catch (err) {
+      setLog(String(err));
+    }
+  }, []);
+
 
   const btnBase =
     "rounded-md border border-border bg-secondary px-4 py-2 text-sm font-medium text-secondary-foreground transition-colors hover:bg-accent disabled:opacity-40";
@@ -200,6 +265,33 @@ export function HolocronEmulator() {
         <pre className="mt-3 min-h-40 whitespace-pre-wrap rounded-md bg-muted p-3 text-sm text-muted-foreground">
           {log}
         </pre>
+        <h3 className="mt-4 text-sm font-semibold text-card-foreground">Persistent slots</h3>
+        <div className="mt-2 space-y-2">
+          {SLOTS.map((slot) => {
+            const record = slots.find((s) => s.id === `slot-${slot}`);
+            return (
+              <div key={slot} className="flex items-center gap-2">
+                <span className="w-14 text-sm text-muted-foreground">Slot {slot}</span>
+                <button className={btnBase + " px-3 py-1"} onClick={() => void saveSlot(slot)}>
+                  Save
+                </button>
+                <button
+                  className={btnBase + " px-3 py-1"}
+                  onClick={() => void loadSlot(slot)}
+                  disabled={!record}
+                >
+                  Load
+                </button>
+                <span className="truncate text-xs text-muted-foreground">
+                  {record
+                    ? `${record.romName} · ${new Date(record.createdAt).toLocaleString()}`
+                    : "empty"}
+                </span>
+              </div>
+            );
+          })}
+        </div>
+
         <h3 className="mt-4 text-sm font-semibold text-card-foreground">Keyboard</h3>
         <ul className="mt-2 space-y-1 text-sm text-muted-foreground">
           <li>Arrows / WASD — D-pad</li>
