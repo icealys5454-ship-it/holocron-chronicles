@@ -415,6 +415,30 @@ export function HolocronEmulator() {
                 >
                   Load
                 </button>
+                <button
+                  className={btnBase + " px-3 py-1"}
+                  onClick={() => void downloadSlot(slot)}
+                  disabled={!record}
+                  title="Download this slot as a .state file"
+                >
+                  ↓
+                </button>
+                <label
+                  className={btnBase + " cursor-pointer px-3 py-1"}
+                  title="Upload a .state file into this slot"
+                >
+                  ↑
+                  <input
+                    type="file"
+                    accept=".state,.sav,.bin"
+                    className="hidden"
+                    onChange={(e) => {
+                      void uploadSlot(slot, e.target.files?.[0]);
+                      e.currentTarget.value = "";
+                    }}
+                  />
+                </label>
+
                 <span className="truncate text-xs text-muted-foreground">
                   {record
                     ? `${record.romName} · ${new Date(record.createdAt).toLocaleString()}`
