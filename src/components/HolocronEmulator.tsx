@@ -122,6 +122,29 @@ export function HolocronEmulator() {
     setStatus(pausedRef.current ? "paused" : "running");
   }, []);
 
+  const togglePower = useCallback(async () => {
+    if (!displayOff) {
+      // Power off: stop emulation and tear the core down.
+      try {
+        await coreRef.current?.shutdown();
+      } catch {
+        /* ignore */
+      }
+      coreRef.current = null;
+      pausedRef.current = false;
+      setAbi(null);
+      setStatus("idle");
+      setDisplayOff(true);
+      setLog("Emulator powered off.");
+      return;
+    }
+    // Power on: boot the core again and resume the loaded ROM if there is one.
+    setDisplayOff(false);
+    await boot();
+    if (romRef.current) await run();
+  }, [displayOff, boot, run]);
+
+
   const saveState = useCallback(async () => {
     try {
       const core = coreRef.current;
@@ -214,18 +237,20 @@ export function HolocronEmulator() {
           />
           {displayOff && (
             <span className="pointer-events-none absolute text-xs uppercase tracking-widest text-muted-foreground">
-              Display off
+              Emulator off
             </span>
           )}
         </div>
         <div className="mt-4 flex flex-wrap items-center gap-2">
           <button
-            onClick={() => setDisplayOff((v) => !v)}
+            onClick={() => void togglePower()}
             className={btnBase}
-            aria-pressed={displayOff}
+            disabled={status === "booting"}
+            aria-pressed={!displayOff}
           >
-            {displayOff ? "Turn display on" : "Turn display off"}
+            {displayOff ? "Turn emulator on" : "Turn emulator off"}
           </button>
+
           <button onClick={toggleFullscreen} className={btnBase}>
             Fullscreen
           </button>
