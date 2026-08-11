@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 
+import { ControllerDiagnostics } from "@/components/ControllerDiagnostics";
 import { HolocronCore } from "@/lib/holocron/core";
 import { StateStore, type StateRecord } from "@/lib/holocron/storage";
 
@@ -241,6 +242,8 @@ export function HolocronEmulator() {
           <li>Q / W — L / R · Enter — Start · Shift — Select</li>
           <li>Gamepads are supported automatically.</li>
         </ul>
+
+        <ControllerDiagnostics />
       </section>
     </div>
   );
