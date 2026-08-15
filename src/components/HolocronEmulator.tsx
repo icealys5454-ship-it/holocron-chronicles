@@ -311,25 +311,28 @@ export function HolocronEmulator() {
   return (
     <div className="grid grid-cols-1 gap-6 lg:grid-cols-[minmax(0,1fr)_360px]">
       <section className="min-w-0 rounded-xl border border-border bg-card p-4">
-        <div
-          ref={stageRef}
-          className="relative flex h-[min(85dvh,calc(100vw*0.75))] w-full items-center justify-center overflow-hidden rounded-lg bg-black"
-        >
-          <canvas
-            ref={canvasRef}
-            width={800}
-            height={600}
-            tabIndex={0}
-            className={
-              "h-full w-full object-contain outline-none" + (displayOff ? " invisible" : "")
-            }
-            style={{ imageRendering: "pixelated" }}
-          />
-          {displayOff && (
-            <span className="pointer-events-none absolute text-xs uppercase tracking-widest text-muted-foreground">
-              Emulator off
-            </span>
-          )}
+        <div className="flex items-center justify-center">
+          <div
+            ref={stageRef}
+            className="relative aspect-[4/3] w-full max-w-[calc(85dvh*4/3)] overflow-hidden rounded-lg bg-black"
+          >
+            <canvas
+              ref={canvasRef}
+              width={800}
+              height={600}
+              tabIndex={0}
+              className={
+                "absolute inset-0 h-full w-full object-contain outline-none" +
+                (displayOff ? " invisible" : "")
+              }
+              style={{ imageRendering: "pixelated" }}
+            />
+            {displayOff && (
+              <span className="pointer-events-none absolute inset-0 flex items-center justify-center text-xs uppercase tracking-widest text-muted-foreground">
+                Emulator off
+              </span>
+            )}
+          </div>
         </div>
         <div className="mt-4 flex flex-wrap items-center gap-2">
           <button
